@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
@@ -23,77 +25,125 @@ class _BoxChartState extends State<BoxChart> {
     'Deep color',
     'Background color'
   ];
+  List nums = [
+    {
+      'label': 'Graph Width',
+      'num': 300.0,
+      'max': 300.0,
+      'min': 0.0,
+      'div': null,
+    },
+    {
+      'label': 'Data num',
+      'num': 16.0,
+      'max': 100.0,
+      'min': 1.0,
+      'div': 99,
+    },
+    {
+      'label': 'block height / width',
+      'num': 0.6,
+      'max': 3.0,
+      'min': 0.0,
+      'div': null,
+    }
+  ];
+  List<int> rand(int l) {
+    final rand = Random();
+    return List.generate(l, (index) => rand.nextInt(4));
+  }
+
+  var data;
+
+  @override
+  void initState() {
+    super.initState();
+    data = rand(nums[1]['max'].toInt());
+  }
 
   @override
   Widget build(BuildContext context) {
+    final d = List.from(data)..length = nums[1]['num'].toInt();
+    nums[0]['max'] = MediaQuery.of(context).size.width;
     return Scaffold(
-      body: Column(children: [
-        Container(
-          padding: const EdgeInsets.only(top: 100),
-          color: colors[4],
-          child: SizedBox(
-            width: double.infinity,
-            height: 300,
-            child: CustomPaint(
-              painter: MyPainter(colors),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(children: [
+            Container(
+              padding: const EdgeInsets.only(top: 100),
+              color: colors[4],
+              child: SizedBox(
+                width: nums[0]['num'],
+                height: 100.0 +
+                    4 * nums[0]['num'] / nums[1]['num'] * nums[2]['num'],
+                child: CustomPaint(
+                  painter: MyPainter(d, colors, nums[2]['num']),
+                ),
+              ),
             ),
-          ),
+            for (var i = 0; i < 5; i++)
+              ElevatedButton(
+                  child: Text(pickerButtonText[i]),
+                  onPressed: () {
+                    var pickerColor = colors[i];
+                    showDialog(
+                        context: context,
+                        builder: ((context) => AlertDialog(
+                              content: SingleChildScrollView(
+                                  child: ColorPicker(
+                                pickerColor: pickerColor,
+                                onColorChanged: (value) =>
+                                    setState(() => pickerColor = value),
+                              )),
+                              actions: [
+                                ElevatedButton(
+                                    onPressed: () {
+                                      setState(() => colors[i] = pickerColor);
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Set'))
+                              ],
+                            )));
+                  }),
+            for (final n in nums)
+              Row(
+                children: [
+                  Text(
+                      '${n['label']}: ${(n['num'] * 10).round().toDouble() / 10}'),
+                  Slider(
+                      divisions: n['div'],
+                      min: n['min'],
+                      max: n['max'],
+                      value: n['num'],
+                      onChanged: (value) => setState(() => n['num'] = value))
+                ],
+              ),
+            ElevatedButton(
+                onPressed: () =>
+                    setState(() => data = rand(nums[1]['max'].toInt())),
+                child: const Text('Reload the data')),
+          ]),
         ),
-        for (var i = 0; i < 5; i++)
-          ElevatedButton(
-              child: Text(pickerButtonText[i]),
-              onPressed: () {
-                var pickerColor = colors[i];
-                showDialog(
-                    context: context,
-                    builder: ((context) => AlertDialog(
-                          content: SingleChildScrollView(
-                              child: ColorPicker(
-                            pickerColor: pickerColor,
-                            onColorChanged: (value) =>
-                                setState(() => pickerColor = value),
-                          )),
-                          actions: [
-                            ElevatedButton(
-                                onPressed: () {
-                                  setState(() => colors[i] = pickerColor);
-                                  Navigator.pop(context);
-                                },
-                                child: const Text('Set'))
-                          ],
-                        )));
-              }),
-      ]),
+      ),
     );
   }
 }
 
 class MyPainter extends CustomPainter {
-  MyPainter(this.colors);
-  List<int> data = [
-    0,
-    1,
-    1,
-    2,
-    2,
-    3,
-    2,
-    1,
-    2,
-    3,
-    2,
-    2,
-    1,
-    1,
-    3,
-    2,
-  ];
+  MyPainter(
+    this.data,
+    this.colors,
+    this.blockRatio,
+  );
+  final rand = Random();
+  final List data;
   List<Color> colors;
+  final double blockRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
     double blockWidth = size.width / data.length;
-    double blockHeight = blockWidth * 0.6;
+    double blockHeight = blockWidth * blockRatio;
     final paint = List.generate(4, (index) => Paint()..color = colors[index]);
     for (var i = 0; i < data.length; i++) {
       final rect = Rect.fromLTWH(
